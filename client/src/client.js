@@ -1,5 +1,7 @@
 // Constants and state
-const SERVER_URL = 'https://voicechat.ibnsina.cc';
+const SERVER_URL = window.location.hostname === 'localhost' ? 
+    `http://${window.location.hostname}:15000` : 
+    'https://voicechat.ibnsina.cc';
 let currentRoom = null;
 let device = null;
 let producerTransport = null;

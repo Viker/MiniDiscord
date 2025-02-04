@@ -26,10 +26,8 @@ services:
   client:
     build: ./client
     container_name: minidiscord-client
-    expose:
-      - "80"
-    volumes:
-      - ./client/src:/usr/share/nginx/html
+    ports:
+      - "12000:12000"
     depends_on:
       - server
     restart: unless-stopped

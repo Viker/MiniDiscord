@@ -13,16 +13,43 @@ const PORT = process.env.PORT || 15000;
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'https://voicechat.ibnsina.cc',
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.CORS_ORIGIN || 'https://voicechat.ibnsina.cc',
+      'http://localhost',
+      'http://localhost:80'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST'],
   credentials: true
 }));
+
+// Basic route for API status
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'MiniDiscord API is running' });
+});
 
 // Socket.IO setup with proxy support
 const io = new Server(httpServer, {
   path: '/socket.io',
   cors: {
-    origin: process.env.CORS_ORIGIN || 'https://voicechat.ibnsina.cc',
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        process.env.CORS_ORIGIN || 'https://voicechat.ibnsina.cc',
+        'http://localhost',
+        'http://localhost:80'
+      ];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   },
