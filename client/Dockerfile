@@ -17,19 +17,22 @@ COPY src/ ./src/
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Create production stage
+FROM node:18-alpine
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Set working directory
+WORKDIR /app
+
+# Install serve package globally
+RUN npm install -g serve
 
 # Copy built files from builder stage
-COPY --from=builder /app/dist/bundle.js /usr/share/nginx/html/
-COPY src/index.html /usr/share/nginx/html/
-COPY src/styles.css /usr/share/nginx/html/
+COPY --from=builder /app/dist/bundle.js ./public/
+COPY src/index.html ./public/
+COPY src/styles.css ./public/
 
-# Expose port 80
-EXPOSE 80
+# Expose port 3000
+EXPOSE 3000
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start static file server
+CMD ["serve", "-s", "public", "-l", "3000"]

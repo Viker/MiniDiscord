@@ -16,8 +16,6 @@ services:
     volumes:
       - ./server:/app
       - /app/node_modules
-      - /etc/letsencrypt/live/voicechat.ibnsina.cc/fullchain.pem:/app/certs/fullchain.pem:ro
-      - /etc/letsencrypt/live/voicechat.ibnsina.cc/privkey.pem:/app/certs/privkey.pem:ro
     restart: unless-stopped
     networks:
       - minidiscord-net
@@ -30,11 +28,7 @@ services:
     build: ./client
     container_name: minidiscord-client
     ports:
-      - "80:80"      # HTTP
-      - "443:443"    # HTTPS
-    volumes:
-      - /etc/letsencrypt/live/voicechat.ibnsina.cc/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-      - /etc/letsencrypt/live/voicechat.ibnsina.cc/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      - "3000:3000"
     depends_on:
       - server
     restart: unless-stopped
