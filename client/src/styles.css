@@ -1,0 +1,219 @@
+:root {
+    --primary-color: #FF9EAA;
+    --secondary-color: #98D8C1;
+    --background-color: #E8F6EF;
+    --accent-color: #FFEBCC;
+    --text-color: #4A4A4A;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --success-color: #6BC76B;
+    --speaking-color: #FFD700;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Comic Neue', cursive;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    background-color: var(--primary-color);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+h1 {
+    font-size: 2.5em;
+    color: white;
+    text-shadow: 2px 2px 4px var(--shadow-color);
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--text-color);
+    font-size: 1.8em;
+}
+
+h3 {
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-size: 1.5em;
+}
+
+.rooms-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    margin-bottom: 20px;
+}
+
+.room-list {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.room-bubble {
+    background-color: var(--secondary-color);
+    padding: 20px 30px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.room-bubble:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px var(--shadow-color);
+}
+
+.room-bubble span {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: white;
+}
+
+.current-room {
+    background-color: white;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.participants-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.participant {
+    background-color: var(--accent-color);
+    padding: 15px 25px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.participant.speaking {
+    background-color: var(--speaking-color);
+    animation: pulse 1s infinite;
+}
+
+.participant.muted::after {
+    content: '🔇';
+    margin-left: 5px;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.control-btn {
+    background-color: var(--secondary-color);
+    border: none;
+    padding: 15px 30px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-family: 'Comic Neue', cursive;
+    font-size: 1.2em;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.control-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px var(--shadow-color);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+}
+
+.control-btn.muted {
+    background-color: var(--primary-color);
+}
+
+.control-btn#leave-btn {
+    background-color: var(--primary-color);
+}
+
+.status-message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    border-radius: 20px;
+    background-color: var(--accent-color);
+    color: var(--text-color);
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-message.show {
+    opacity: 1;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 2em;
+    }
+
+    .room-bubble {
+        padding: 15px 25px;
+    }
+
+    .controls {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .control-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

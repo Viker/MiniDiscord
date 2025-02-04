@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  server:
+    build: ./server
+    container_name: minidiscord-server
+    environment:
+      - NODE_ENV=production
+      - PORT=15000
+      - MEDIASOUP_LISTEN_IP=0.0.0.0
+      - MEDIASOUP_ANNOUNCED_IP=${SERVER_PUBLIC_IP}
+      - CORS_ORIGIN=https://voicechat.ibnsina.cc
+    expose:
+      - "15000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - minidiscord-net
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  client:
+    build: ./client
+    container_name: minidiscord-client
+    expose:
+      - "80"
+    volumes:
+      - ./client/src:/usr/share/nginx/html
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - minidiscord-net
+
+networks:
+  minidiscord-net:
+    driver: bridge

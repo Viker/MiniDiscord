@@ -1,0 +1,282 @@
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import * as mediasoup from 'mediasoup';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app = express();
+const httpServer = createServer(app);
+const PORT = process.env.PORT || 15000;
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'https://voicechat.ibnsina.cc',
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
+
+// Socket.IO setup with proxy support
+const io = new Server(httpServer, {
+  path: '/socket.io',
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'https://voicechat.ibnsina.cc',
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
+
+// MediaSoup setup
+let worker;
+let router;
+const mediaCodecs = [
+  {
+    kind: 'audio',
+    mimeType: 'audio/opus',
+    clockRate: 48000,
+    channels: 2
+  }
+];
+
+// Initialize MediaSoup
+async function initializeMediaSoup() {
+  worker = await mediasoup.createWorker({
+    logLevel: 'warn',
+    rtcMinPort: 40000,
+    rtcMaxPort: 49999,
+  });
+
+  router = await worker.createRouter({ mediaCodecs });
+
+  worker.on('died', () => {
+    console.error('MediaSoup worker died, exiting in 2 seconds... [pid:%d]', worker.pid);
+    setTimeout(() => process.exit(1), 2000);
+  });
+}
+
+// Room management
+const rooms = new Map();
+
+class Room {
+  constructor(roomId) {
+    this.id = roomId;
+    this.participants = new Map();
+    this.transports = new Map();
+    this.producers = new Map();
+    this.consumers = new Map();
+  }
+}
+
+// Socket.IO connection handling
+io.on('connection', async (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('join-room', async (roomId, callback) => {
+    try {
+      if (!rooms.has(roomId)) {
+        rooms.set(roomId, new Room(roomId));
+      }
+      const room = rooms.get(roomId);
+      
+      socket.room = room;
+      socket.roomId = roomId;
+      await socket.join(roomId);
+
+      // Notify others in the room
+      socket.to(roomId).emit('participant-joined', { 
+        participantId: socket.id 
+      });
+
+      // Send list of current participants
+      const participants = Array.from(room.participants.keys());
+      callback({ 
+        success: true,
+        participants 
+      });
+
+      room.participants.set(socket.id, {
+        id: socket.id,
+        isMuted: false,
+        isSpeaking: false
+      });
+
+    } catch (error) {
+      callback({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // WebRTC Transport creation
+  socket.on('create-transport', async (callback) => {
+    try {
+      const transport = await router.createWebRtcTransport({
+        listenIps: [
+          {
+            ip: '0.0.0.0',
+            announcedIp: process.env.MEDIASOUP_ANNOUNCED_IP
+          }
+        ],
+        enableUdp: true,
+        enableTcp: true,
+        preferUdp: true,
+        initialAvailableOutgoingBitrate: 1000000
+      });
+
+      socket.room.transports.set(transport.id, transport);
+
+      callback({
+        success: true,
+        params: {
+          id: transport.id,
+          iceParameters: transport.iceParameters,
+          iceCandidates: transport.iceCandidates,
+          dtlsParameters: transport.dtlsParameters
+        }
+      });
+    } catch (error) {
+      callback({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // Connect Transport
+  socket.on('connect-transport', async ({ transportId, dtlsParameters }, callback) => {
+    try {
+      const transport = socket.room.transports.get(transportId);
+      await transport.connect({ dtlsParameters });
+      callback({ success: true });
+    } catch (error) {
+      callback({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // Produce audio
+  socket.on('produce', async ({ transportId, kind, rtpParameters }, callback) => {
+    try {
+      const transport = socket.room.transports.get(transportId);
+      const producer = await transport.produce({ kind, rtpParameters });
+      
+      socket.room.producers.set(producer.id, producer);
+
+      producer.on('score', (score) => {
+        // Monitor producer quality
+      });
+
+      callback({ 
+        success: true,
+        producerId: producer.id 
+      });
+
+    } catch (error) {
+      callback({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // Consume audio
+  socket.on('consume', async ({ producerId }, callback) => {
+    try {
+      const producer = socket.room.producers.get(producerId);
+      const transport = Array.from(socket.room.transports.values())
+        .find(t => t.appData.consumerId === socket.id);
+
+      const consumer = await transport.consume({
+        producerId: producer.id,
+        rtpCapabilities: router.rtpCapabilities,
+        paused: true
+      });
+
+      socket.room.consumers.set(consumer.id, consumer);
+
+      callback({
+        success: true,
+        params: {
+          id: consumer.id,
+          producerId: producer.id,
+          kind: consumer.kind,
+          rtpParameters: consumer.rtpParameters
+        }
+      });
+
+    } catch (error) {
+      callback({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // Handle mute/unmute
+  socket.on('toggle-mute', (isMuted) => {
+    if (socket.room && socket.room.participants.has(socket.id)) {
+      const participant = socket.room.participants.get(socket.id);
+      participant.isMuted = isMuted;
+      io.to(socket.roomId).emit('participant-muted', {
+        participantId: socket.id,
+        isMuted
+      });
+    }
+  });
+
+  // Handle speaking status
+  socket.on('speaking-change', (isSpeaking) => {
+    if (socket.room && socket.room.participants.has(socket.id)) {
+      const participant = socket.room.participants.get(socket.id);
+      participant.isSpeaking = isSpeaking;
+      io.to(socket.roomId).emit('participant-speaking', {
+        participantId: socket.id,
+        isSpeaking
+      });
+    }
+  });
+
+  // Cleanup on disconnect
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+    if (socket.room) {
+      socket.room.participants.delete(socket.id);
+      io.to(socket.roomId).emit('participant-left', {
+        participantId: socket.id
+      });
+
+      // Cleanup transports, producers, and consumers
+      socket.room.transports.forEach(transport => {
+        if (transport.appData.producerId === socket.id ||
+            transport.appData.consumerId === socket.id) {
+          transport.close();
+          socket.room.transports.delete(transport.id);
+        }
+      });
+    }
+  });
+});
+
+// Start the server
+async function start() {
+  try {
+    await initializeMediaSoup();
+    httpServer.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+start();

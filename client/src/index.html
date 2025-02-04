@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fun Voice Chat! 🎮</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎮 Fun Voice Chat! 🎮</h1>
+        </header>
+
+        <div class="rooms-container">
+            <h2>Choose a Fun Room!</h2>
+            <div class="room-list">
+                <div class="room-bubble" data-room="fun-zone">
+                    <span>🌈 Fun Zone</span>
+                </div>
+                <div class="room-bubble" data-room="game-room">
+                    <span>🎮 Game Room</span>
+                </div>
+                <div class="room-bubble" data-room="music-club">
+                    <span>🎵 Music Club</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="current-room hidden">
+            <h2>Room: <span id="room-name">Not Connected</span></h2>
+            
+            <div class="participants-container">
+                <h3>Friends in Room:</h3>
+                <div id="participants-list" class="participants-list">
+                    <!-- Participants will be added here dynamically -->
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="mute-btn" class="control-btn">
+                    <span class="mic-icon">🎤</span>
+                    <span class="btn-text">Mute</span>
+                </button>
+                <button id="leave-btn" class="control-btn">
+                    <span>👋</span>
+                    <span class="btn-text">Leave Room</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="status-message" class="status-message"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediasoup-client/3.6.98/mediasoup-client.min.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
