@@ -1,6 +1,8 @@
 import express from 'express';
-import { createServer } from 'http';
+import { createServer } from 'https';
 import { Server } from 'socket.io';
+import fs from 'fs';
+import path from 'path';
 import * as mediasoup from 'mediasoup';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -8,7 +10,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
+
+// SSL configuration
+const sslOptions = {
+  key: fs.readFileSync('/app/certs/privkey.pem'),
+  cert: fs.readFileSync('/app/certs/fullchain.pem')
+};
+
+const httpsServer = createServer(sslOptions, app);
 const PORT = process.env.PORT || 15000;
 
 // CORS configuration
@@ -34,8 +43,8 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'MiniDiscord API is running' });
 });
 
-// Socket.IO setup with proxy support
-const io = new Server(httpServer, {
+// Socket.IO setup with secure WebSocket support
+const io = new Server(httpsServer, {
   path: '/socket.io',
   cors: {
     origin: (origin, callback) => {
@@ -305,8 +314,8 @@ io.on('connection', async (socket) => {
 async function start() {
   try {
     await initializeMediaSoup();
-    httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
+    httpsServer.listen(PORT, '0.0.0.0', () => {
+      console.log(`Secure server running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

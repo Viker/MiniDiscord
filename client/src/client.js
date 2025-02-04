@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 
 // Constants and state
 const SERVER_URL = window.location.hostname === 'localhost' ? 
-    `http://${window.location.hostname}:15000` : 
+    `https://${window.location.hostname}:15000` : 
     'https://voicechat.ibnsina.cc';
 let currentRoom = null;
 let device = null;
@@ -39,9 +39,10 @@ const createSocketRequest = (socket) => {
 function setupSocket() {
     return io(SERVER_URL, {
         path: '/socket.io',
-        transports: ['websocket', 'polling'],
+        transports: ['websocket'],
         secure: true,
         rejectUnauthorized: false,
+        withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
