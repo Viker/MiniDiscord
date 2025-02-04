@@ -104,6 +104,11 @@ class Room {
 io.on('connection', async (socket) => {
   console.log('Client connected:', socket.id);
 
+  // Handle RTP Capabilities request
+  socket.on('get-rtp-capabilities', (callback) => {
+    callback(router.rtpCapabilities);
+  });
+
   socket.on('join-room', async (roomId, callback) => {
     try {
       if (!rooms.has(roomId)) {

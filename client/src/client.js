@@ -343,18 +343,27 @@ window.addEventListener('load', () => {
 
         // Initialize socket with username and setup handlers
         socket = setupSocket();
-        socket.request = createSocketRequest(socket);
-        setupSocketHandlers(socket);
+        
+        // Wait for socket connection before proceeding
+        socket.on('connect', async () => {
+            socket.request = createSocketRequest(socket);
+            setupSocketHandlers(socket);
 
-        try {
-            if (await initializeMediaSoup() && await createSendTransport() && await initializeAudio()) {
-                isConnected = true;
-                showStatus('Ready to chat! 🎉');
+            try {
+                if (await initializeMediaSoup() && await createSendTransport() && await initializeAudio()) {
+                    isConnected = true;
+                    showStatus('Ready to chat! 🎉');
+                }
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                showStatus('Failed to start 😢');
             }
-        } catch (error) {
-            console.error('Failed to initialize:', error);
-            showStatus('Failed to start 😢');
-        }
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            showStatus('Failed to connect to server 😢');
+        });
     });
 
     // Handle enter key in name input
