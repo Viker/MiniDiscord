@@ -1,3 +1,6 @@
+import * as mediasoupClient from 'mediasoup-client';
+import { io } from 'socket.io-client';
+
 // Constants and state
 const SERVER_URL = window.location.hostname === 'localhost' ? 
     `http://${window.location.hostname}:15000` : 
