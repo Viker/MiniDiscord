@@ -13,7 +13,18 @@
             <h1>🎮 Fun Voice Chat! 🎮</h1>
         </header>
 
-        <div class="rooms-container">
+        <div class="name-input-container">
+            <h2>What's your name?</h2>
+            <div class="name-input-wrapper">
+                <input type="text" id="username-input" placeholder="Enter your name..." maxlength="20">
+                <button id="start-btn" class="control-btn">
+                    <span>✨</span>
+                    <span class="btn-text">Let's Chat!</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="rooms-container hidden">
             <h2>Choose a Fun Room!</h2>
             <div class="room-list">
                 <div class="room-bubble" data-room="fun-zone">

@@ -13,6 +13,12 @@ let consumerTransports = new Map();
 let audioConsumers = new Map();
 let isConnected = false;
 let isMuted = false;
+let username = '';
+
+// DOM Elements
+const nameInputContainer = document.querySelector('.name-input-container');
+const usernameInput = document.getElementById('username-input');
+const startButton = document.getElementById('start-btn');
 
 // Socket request helper function
 const createSocketRequest = (socket) => {
@@ -30,18 +36,20 @@ const createSocketRequest = (socket) => {
 };
 
 // Socket.IO setup
-const socket = io(SERVER_URL, {
-    path: '/socket.io',
-    transports: ['websocket', 'polling'],
-    secure: true,
-    rejectUnauthorized: false,
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000
-});
+function setupSocket() {
+    return io(SERVER_URL, {
+        path: '/socket.io',
+        transports: ['websocket', 'polling'],
+        secure: true,
+        rejectUnauthorized: false,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        query: { username }
+    });
+}
 
-// Add request method to socket
-socket.request = createSocketRequest(socket);
+let socket;
 
 // DOM Elements
 const roomsList = document.querySelector('.room-list');
@@ -68,7 +76,7 @@ function updateParticipantsList(participants) {
         div.className = 'participant';
         div.id = `participant-${participant.id}`;
         div.innerHTML = `
-            <span class="participant-name">Friend ${participant.id.slice(0, 4)}</span>
+            <span class="participant-name">${participant.username}</span>
             ${participant.isMuted ? '🔇' : '🎤'}
         `;
         if (participant.isSpeaking) {
@@ -180,8 +188,19 @@ async function createReceiveTransport(producerId, participantId) {
 // Audio Functions
 async function initializeAudio() {
     try {
+        // First check if we have permission
+        const permissionResult = await navigator.permissions.query({ name: 'microphone' });
+        if (permissionResult.state === 'denied') {
+            throw new Error('Microphone permission denied. Please enable it in your browser settings.');
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const track = stream.getAudioTracks()[0];
+        
+        if (!track.enabled) {
+            throw new Error('Microphone is disabled or not working properly.');
+        }
+
         audioProducer = await producerTransport.produce({ track });
         
         // Setup audio level detection
@@ -205,10 +224,19 @@ async function initializeAudio() {
             socket.emit('speaking-change', isSpeaking);
         }, 100);
 
+        showStatus('Microphone connected successfully! 🎤');
         return true;
     } catch (error) {
         console.error('Failed to initialize audio:', error);
-        showStatus('Failed to access microphone 😢');
+        let errorMessage = 'Failed to access microphone 😢';
+        
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            errorMessage = 'Please allow microphone access to use voice chat 🎤';
+        } else if (error.name === 'NotFoundError') {
+            errorMessage = 'No microphone found. Please connect one to use voice chat 🎤';
+        }
+        
+        showStatus(errorMessage, 5000);
         return false;
     }
 }
@@ -264,46 +292,77 @@ muteButton.addEventListener('click', () => {
 
 leaveButton.addEventListener('click', leaveRoom);
 
-// Socket Event Handlers
-socket.on('participant-joined', async ({ participantId }) => {
-    showStatus('New friend joined! 👋');
-    const participants = await socket.request('get-participants', currentRoom);
-    updateParticipantsList(participants);
-});
+// Setup socket event handlers
+function setupSocketHandlers(socket) {
+    socket.on('participant-joined', async ({ participantId, username }) => {
+        showStatus(`${username} joined! 👋`);
+        const participants = await socket.request('get-participants', currentRoom);
+        updateParticipantsList(participants);
+    });
 
-socket.on('participant-left', ({ participantId }) => {
-    const participantElement = document.getElementById(`participant-${participantId}`);
-    if (participantElement) {
-        participantElement.remove();
-    }
-    showStatus('Friend left the room 👋');
-});
+    socket.on('participant-left', ({ participantId }) => {
+        const participantElement = document.getElementById(`participant-${participantId}`);
+        const username = participantElement?.querySelector('.participant-name')?.textContent || 'Someone';
+        if (participantElement) {
+            participantElement.remove();
+        }
+        showStatus(`${username} left the room 👋`);
+    });
 
-socket.on('participant-muted', ({ participantId, isMuted }) => {
-    const participantElement = document.getElementById(`participant-${participantId}`);
-    if (participantElement) {
-        participantElement.classList.toggle('muted', isMuted);
-    }
-});
+    socket.on('participant-muted', ({ participantId, isMuted }) => {
+        const participantElement = document.getElementById(`participant-${participantId}`);
+        if (participantElement) {
+            participantElement.classList.toggle('muted', isMuted);
+        }
+    });
 
-socket.on('participant-speaking', ({ participantId, isSpeaking }) => {
-    const participantElement = document.getElementById(`participant-${participantId}`);
-    if (participantElement) {
-        participantElement.classList.toggle('speaking', isSpeaking);
-    }
-});
+    socket.on('participant-speaking', ({ participantId, isSpeaking }) => {
+        const participantElement = document.getElementById(`participant-${participantId}`);
+        if (participantElement) {
+            participantElement.classList.toggle('speaking', isSpeaking);
+        }
+    });
+}
 
 // Initialize everything when the page loads
-window.addEventListener('load', async () => {
-    try {
-        if (await initializeMediaSoup() && await createSendTransport() && await initializeAudio()) {
-            isConnected = true;
-            showStatus('Ready to chat! 🎉');
+window.addEventListener('load', () => {
+    // Start with name input
+    nameInputContainer.classList.remove('hidden');
+    usernameInput.focus();
+
+    startButton.addEventListener('click', async () => {
+        username = usernameInput.value.trim();
+        if (username.length < 1) {
+            showStatus('Please enter your name! 😊');
+            return;
         }
-    } catch (error) {
-        console.error('Failed to initialize:', error);
-        showStatus('Failed to start 😢');
-    }
+
+        // Hide name input, show rooms
+        nameInputContainer.classList.add('hidden');
+        document.querySelector('.rooms-container').classList.remove('hidden');
+
+        // Initialize socket with username and setup handlers
+        socket = setupSocket();
+        socket.request = createSocketRequest(socket);
+        setupSocketHandlers(socket);
+
+        try {
+            if (await initializeMediaSoup() && await createSendTransport() && await initializeAudio()) {
+                isConnected = true;
+                showStatus('Ready to chat! 🎉');
+            }
+        } catch (error) {
+            console.error('Failed to initialize:', error);
+            showStatus('Failed to start 😢');
+        }
+    });
+
+    // Handle enter key in name input
+    usernameInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            startButton.click();
+        }
+    });
 });
 
 // Cleanup on page unload

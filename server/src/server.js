@@ -115,22 +115,25 @@ io.on('connection', async (socket) => {
       socket.roomId = roomId;
       await socket.join(roomId);
 
+      const username = socket.handshake.query.username || `User ${socket.id.slice(0, 4)}`;
+      room.participants.set(socket.id, {
+        id: socket.id,
+        username: username,
+        isMuted: false,
+        isSpeaking: false
+      });
+
       // Notify others in the room
       socket.to(roomId).emit('participant-joined', { 
-        participantId: socket.id 
+        participantId: socket.id,
+        username: username
       });
 
       // Send list of current participants
-      const participants = Array.from(room.participants.keys());
+      const participants = Array.from(room.participants.values());
       callback({ 
         success: true,
         participants 
-      });
-
-      room.participants.set(socket.id, {
-        id: socket.id,
-        isMuted: false,
-        isSpeaking: false
       });
 
     } catch (error) {

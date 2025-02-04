@@ -56,6 +56,38 @@ h3 {
     font-size: 1.5em;
 }
 
+.name-input-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.name-input-wrapper {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+#username-input {
+    padding: 15px 25px;
+    border-radius: 30px;
+    border: 2px solid var(--secondary-color);
+    font-family: 'Comic Neue', cursive;
+    font-size: 1.2em;
+    width: 250px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+#username-input:focus {
+    border-color: var(--primary-color);
+}
+
 .rooms-container {
     background-color: white;
     padding: 20px;
