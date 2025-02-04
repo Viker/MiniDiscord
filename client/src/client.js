@@ -22,6 +22,19 @@ const socket = io(SERVER_URL, {
     reconnectionDelay: 1000
 });
 
+// Add request method to socket
+socket.request = function(type, data = null) {
+    return new Promise((resolve, reject) => {
+        socket.emit(type, data, (response) => {
+            if (response.error) {
+                reject(response.error);
+            } else {
+                resolve(response);
+            }
+        });
+    });
+};
+
 // DOM Elements
 const roomsList = document.querySelector('.room-list');
 const currentRoomDiv = document.querySelector('.current-room');
