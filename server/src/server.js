@@ -11,13 +11,26 @@ dotenv.config();
 
 const app = express();
 
-// SSL configuration
-const sslOptions = {
-  key: fs.readFileSync('/app/certs/privkey.pem'),
-  cert: fs.readFileSync('/app/certs/fullchain.pem')
-};
+let server;
 
-const httpsServer = createServer(sslOptions, app);
+// Create server based on environment
+if (process.env.NODE_ENV === 'production') {
+  try {
+    const sslOptions = {
+      key: fs.readFileSync('/app/certs/privkey.pem'),
+      cert: fs.readFileSync('/app/certs/fullchain.pem')
+    };
+    server = createServer(sslOptions, app);
+    console.log('Running in production mode with HTTPS');
+  } catch (error) {
+    console.error('Failed to load SSL certificates:', error);
+    process.exit(1);
+  }
+} else {
+  // Use HTTP for development
+  server = require('http').createServer(app);
+  console.log('Running in development mode with HTTP');
+}
 const PORT = process.env.PORT || 15000;
 
 // CORS configuration
@@ -44,7 +57,7 @@ app.get('/', (req, res) => {
 });
 
 // Socket.IO setup with secure WebSocket support
-const io = new Server(httpsServer, {
+const io = new Server(server, {
   path: '/socket.io',
   cors: {
     origin: (origin, callback) => {
@@ -314,8 +327,8 @@ io.on('connection', async (socket) => {
 async function start() {
   try {
     await initializeMediaSoup();
-    httpsServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`Secure server running on port ${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

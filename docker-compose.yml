@@ -5,7 +5,7 @@ services:
     build: ./server
     container_name: minidiscord-server
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=15000
       - MEDIASOUP_LISTEN_IP=0.0.0.0
       - MEDIASOUP_ANNOUNCED_IP=${SERVER_PUBLIC_IP}
