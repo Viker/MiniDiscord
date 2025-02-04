@@ -10,8 +10,8 @@ services:
       - MEDIASOUP_LISTEN_IP=0.0.0.0
       - MEDIASOUP_ANNOUNCED_IP=${SERVER_PUBLIC_IP}
       - CORS_ORIGIN=https://voicechat.ibnsina.cc
-    expose:
-      - "15000"
+    ports:
+      - "15000:15000"
     volumes:
       - ./server:/app
       - /app/node_modules
