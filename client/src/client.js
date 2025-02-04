@@ -11,6 +11,21 @@ let audioConsumers = new Map();
 let isConnected = false;
 let isMuted = false;
 
+// Socket request helper function
+const createSocketRequest = (socket) => {
+    return function(type, data = null) {
+        return new Promise((resolve, reject) => {
+            socket.emit(type, data, (response) => {
+                if (response?.error) {
+                    reject(response.error);
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+    };
+};
+
 // Socket.IO setup
 const socket = io(SERVER_URL, {
     path: '/socket.io',
@@ -23,17 +38,7 @@ const socket = io(SERVER_URL, {
 });
 
 // Add request method to socket
-socket.request = function(type, data = null) {
-    return new Promise((resolve, reject) => {
-        socket.emit(type, data, (response) => {
-            if (response.error) {
-                reject(response.error);
-            } else {
-                resolve(response);
-            }
-        });
-    });
-};
+socket.request = createSocketRequest(socket);
 
 // DOM Elements
 const roomsList = document.querySelector('.room-list');
